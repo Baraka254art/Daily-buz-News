@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DailyBuz - Global Headlines</title>
+  <meta name="description" content="Live global news from top sources around the world. Powered by DailyBuz.">
+  <link rel="canonical" href="https://dailybuz-news.netlify.app/" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="DailyBuz - Global Headlines">
+  <meta property="og:description" content="Live global news from trusted media outlets.">
+  <meta property="og:image" content="https://via.placeholder.com/300x180?text=DailyBuz">
+  <meta property="og:url" content="https://dailybuz-news.netlify.app">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="DailyBuz">
+
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="DailyBuz - Global Headlines">
+  <meta name="twitter:description" content="Live global news from trusted media outlets.">
+  <meta name="twitter:image" content="https://via.placeholder.com/300x180?text=DailyBuz">
+
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+  <!-- Schema.org -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "NewsMediaOrganization",
+    "name": "DailyBuz",
+    "url": "https://dailybuz-news.netlify.app",
+    "logo": "https://via.placeholder.com/300x180?text=DailyBuz"
+  }
+  </script>
+
+  <style>
+    :root {
+      --bg: #f9f9f9;
+      --text: #111;
+      --card: #fff;
+    }
+    body.dark {
+      --bg: #111;
+      --text: #eee;
+      --card: #222;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 0;
+      transition: background 0.3s, color 0.3s;
+    }
+    header {
+      background: #111;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+      position: relative;
+    }
+    #darkToggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: #007BFF;
+      color: white;
+      border: none;
+      padding: 0.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #loading {
+      text-align: center;
+      padding: 1rem;
+      font-size: 1.1rem;
+    }
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1rem;
+      padding: 1rem;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.2s;
+    }
+    .card:hover {
+      transform: scale(1.01);
+    }
+    .card img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+    }
+    .card-content {
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin: 0 0 0.5rem;
+    }
+    .card-description {
+      font-size: 0.9rem;
+      margin-bottom: 1rem;
+    }
+    .card-source {
+      font-size: 0.8rem;
+      color: #777;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .card-source img {
+      width: 16px;
+      height: 16px;
+    }
+    .read-more {
+      text-decoration: none;
+      background: #007BFF;
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      align-self: flex-start;
+      margin-top: auto;
+      cursor: pointer;
+    }
+    .no-news {
+      text-align: center;
+      color: #999;
+      font-size: 1.2rem;
+      padding: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    🌍 DailyBuz - Global News Aggregator
+    <button id="darkToggle" aria-label="Toggle dark mode">🌓</button>
+  </header>
+
+  <main>
+    <div id="loading" role="status">Loading news...</div>
+    <div class="container" id="newsContainer" role="main"></div>
+    <div id="noNews" class="no-news" style="display: none;">🚫 No news could be loaded at this time.</div>
+  </main>
+
+  <script>
+    const feeds = [
+      'https://feeds.bbci.co.uk/news/world/rss.xml',
+      'https://rss.nytimes.com/services/xml/rss/nyt/World.xml',
+      'https://feeds.reuters.com/reuters/topNews',
+      'https://www.france24.com/en/rss'
+    ];
+
+    const toggle = document.getElementById("darkToggle");
+    toggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    });
+
+    window.addEventListener("DOMContentLoaded", () => {
+      if (localStorage.getItem("theme") === "dark") {
+        document.body.classList.add("dark");
+      }
+    });
+
+    function truncateText(text, limit) {
+      if (text.length <= limit) return text;
+      return text.slice(0, limit).replace(/\s+\S*$/, '') + '...';
+    }
+
+    function faviconForUrl(url) {
+      try {
+        return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`;
+      } catch {
+        return '';
+      }
+    }
+
+    async function fetchRSS(feedUrl) {
+      const api = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=jgzbnuxswad6xqiha0gzx2sba3plw0nkepci6rwo`;
+      const res = await fetch(api);
+      return res.json();
+    }
+
+    async function fetchCNNArticle() {
+      try {
+        const data = await fetchRSS('http://rss.cnn.com/rss/cnn_topstories.rss');
+        const item = data.items[0];
+        const source = data.feed?.title || 'CNN';
+
+        let imageUrl = item.enclosure?.link || item.enclosure?.url || item.thumbnail || '';
+        if (!imageUrl) {
+          const match = item.description.match(/<img.*?src=["'](.*?)["']/);
+          imageUrl = match ? match[1] : 'https://via.placeholder.com/300x180?text=No+Image';
+        }
+
+        const cleanDescription = truncateText(item.description.replace(/<[^>]+>/g, ''), 100);
+        const container = document.getElementById('newsContainer');
+
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${imageUrl}" alt="${item.title}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x180?text=No+Image';"/>
+          <div class="card-content">
+            <div class="card-title">${item.title}</div>
+            <div class="card-source">Source: ${source}</div>
+            <div class="card-description">${cleanDescription}</div>
+            <a class="read-more" href="${item.link}" target="_blank">Read More</a>
+          </div>
+        `;
+        container.appendChild(card);
+      } catch (err) {
+        console.warn('Failed to load CNN article', err);
+      }
+    }
+
+    async function fetchNewsdataArticles() {
+      try {
+        const res = await fetch(`https://newsdata.io/api/1/news?apikey=pub_f4fe1513cdc1440f9329b03b039b445e&language=en&country=us&category=top`);
+        const data = await res.json();
+        const articles = data.results || [];
+        const container = document.getElementById('newsContainer');
+
+        articles.slice(0, 2).forEach(article => {
+          const imageUrl = article.image_url || 'https://via.placeholder.com/300x180?text=No+Image';
+          const sourceIcon = faviconForUrl(article.link);
+
+          const card = document.createElement('article');
+          card.className = 'card';
+          card.innerHTML = `
+            <img src="${imageUrl}" alt="${article.title}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x180?text=No+Image';"/>
+            <div class="card-content">
+              <div class="card-title">${article.title}</div>
+              <div class="card-source">${sourceIcon ? `<img src="${sourceIcon}"/>` : ''} Source: ${article.source_id || 'Newsdata.io'}</div>
+              <div class="card-description">${truncateText(article.description || '', 100)}</div>
+              <a class="read-more" href="${article.link}" target="_blank">Read More</a>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      } catch (err) {
+        console.warn('Failed to load Newsdata.io articles', err);
+      }
+    }
+
+    async function fetchGNewsArticle() {
+      try {
+        const res = await fetch(`https://gnews.io/api/v4/top-headlines?lang=en&max=1&apikey=913f2e026f41d78abc390591a05e7b17`);
+        const data = await res.json();
+        const article = data.articles && data.articles[0];
+        if (!article) return;
+
+        const container = document.getElementById('newsContainer');
+        const imageUrl = article.image || 'https://via.placeholder.com/300x180?text=No+Image';
+        const sourceIcon = faviconForUrl(article.source?.url || article.url);
+
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <img src="${imageUrl}" alt="${article.title}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x180?text=No+Image';"/>
+          <div class="card-content">
+            <div class="card-title">🌟 Featured: ${article.title}</div>
+            <div class="card-source">${sourceIcon ? `<img src="${sourceIcon}"/>` : ''} Source: ${article.source?.name || 'GNews'}</div>
+            <div class="card-description">${truncateText(article.description || '', 100)}</div>
+            <a class="read-more" href="${article.url}" target="_blank">Read More</a>
+          </div>
+        `;
+        container.prepend(card);
+      } catch (err) {
+        console.warn('Failed to load GNews article', err);
+      }
+    }
+
+    async function loadNews() {
+      const container = document.getElementById('newsContainer');
+      const loading = document.getElementById('loading');
+      const noNews = document.getElementById('noNews');
+      container.innerHTML = '';
+      loading.style.display = 'block';
+      noNews.style.display = 'none';
+
+      await fetchGNewsArticle();
+      await fetchNewsdataArticles();
+      await fetchCNNArticle();
+
+      await Promise.all(feeds.map(async (url) => {
+        try {
+          const data = await fetchRSS(url);
+          const source = data.feed?.title || 'Unknown';
+
+          data.items.slice(0, 3).forEach(item => {
+            let imageUrl = item.enclosure?.link || item.enclosure?.url || item.thumbnail || '';
+            if (!imageUrl) {
+              const match = item.description.match(/<img.*?src=["'](.*?)["']/);
+              imageUrl = match ? match[1] : 'https://via.placeholder.com/300x180?text=No+Image';
+            }
+
+            const cleanDescription = truncateText(item.description.replace(/<[^>]+>/g, ''), 100);
+
+            const card = document.createElement('article');
+            card.className = 'card';
+            card.innerHTML = `
+              <img src="${imageUrl}" alt="${item.title}" onerror="this.onerror=null;this.src='https://via.placeholder.com/300x180?text=No+Image';"/>
+              <div class="card-content">
+                <div class="card-title">${item.title}</div>
+                <div class="card-source">Source: ${source}</div>
+                <div class="card-description">${cleanDescription}</div>
+                <a class="read-more" href="${item.link}" target="_blank">Read More</a>
+              </div>
+            `;
+            container.appendChild(card);
+          });
+        } catch (err) {
+          console.warn('Error loading RSS:', url, err);
+        }
+      }));
+
+      loading.style.display = 'none';
+      if (!container.children.length) noNews.style.display = 'block';
+    }
+
+    loadNews();
+    setInterval(loadNews, 300000);
+  </script>
+</body>
+</html>
